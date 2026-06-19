@@ -459,6 +459,7 @@ async def main():
         success("Tunnel granted")
     else:
         error("Tunnel denied")
+        sys.exit(1)
 
     print(f"\nTunnel Token : {tunnel_token}")
     print(f"Tunnel Port  : {tunnel_port}")

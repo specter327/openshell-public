@@ -143,7 +143,7 @@ async def main():
 
     print(f"\nUID:\n{console_uid}")
     print(f"\nPUBLIC KEY:\n{console_pik}")
-    print(f"\nPRIVATE KEY:\n{console_ppik}")
+    print(f"\nPRIVATE KEY:\n{console_ppik[0:10]}")
 
 
     # ==========================================================
@@ -261,7 +261,7 @@ async def main():
     client_auth_token = verification.get("auth_token")
 
     print("\nAUTH TOKEN:\n")
-    print(client_auth_token)
+    print(client_auth_token[0:25])
 
 
     # ==========================================================
@@ -338,7 +338,9 @@ async def main():
     	}
     )
 
-    if len(client_agents_query_request.json().get("entities")) == 0: error("Any entity available")
+    if len(client_agents_query_request.json().get("entities")) == 0: 
+        error("Any entity available")
+        sys.exit(0)
     else: 
         for entity in client_agents_query_request.json().get("entities"): 
             info(f"    Entity UID: {entity.get('entity_uid')}")
