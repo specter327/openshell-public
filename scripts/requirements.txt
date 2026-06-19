@@ -1,0 +1,5 @@
+asyncdatapackage
+uuid6
+cryptography
+websockets
+requests
