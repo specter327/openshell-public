@@ -108,12 +108,35 @@ async def main():
     global console_uid, console_pik, console_ppik
     
     # ==========================================================
+    # CLI ARGUMENT PARSING
+    # ==========================================================
+
+    regenerate = "--regenerate" in sys.argv
+    integrate_mode = False
+    security_code = None
+
+    if "--integrate" in sys.argv:
+        integrate_mode = True
+        try:
+            idx = sys.argv.index("--integrate")
+            if idx + 1 < len(sys.argv):
+                val = sys.argv[idx + 1]
+                if val.startswith("--"):
+                    error("--integrate requires SECURITY_CODE_CLOSED_PASSPORT")
+                    sys.exit(1)
+                security_code = val
+            else:
+                error("--integrate requires SECURITY_CODE_CLOSED_PASSPORT")
+                sys.exit(1)
+        except ValueError:
+            error("--integrate requires SECURITY_CODE_CLOSED_PASSPORT")
+            sys.exit(1)
+
+    # ==========================================================
     # ENTITY GENERATION / LOADING
     # ==========================================================
 
     header("CONSOLE IDENTITY")
-
-    regenerate = "--regenerate" in sys.argv
 
     if not os.path.exists(IDENTITY_FILE) or regenerate:
         info("Generating new Console identity...")
@@ -255,6 +278,7 @@ async def main():
         success("Authentication successful")
     else:
         error("Authentication failed")
+        sys.exit(1)
 
     pretty(verification)
 
@@ -265,37 +289,38 @@ async def main():
 
 
     # ==========================================================
-    # CLOSED INTEGRATION
+    # CLOSED INTEGRATION (CONDITIONAL)
     # ==========================================================
 
-    header("CLOSED INTEGRATION")
+    if integrate_mode:
+        header("CLOSED INTEGRATION")
 
-    warning("Enter CLOSED passport security code")
+        print(f"\nConsole UID : {console_uid}")
+        print(f"Console PIK : {console_pik}\n")
 
-    security_code = input("\nSECURITY CODE > ")
+        client_integration_closed_request = requests.post(
+            f"{SERVER_PROTOCOL.lower()}://"
+            f"{SERVER_ADDRESS}:{SERVER_PORT}/"
+            f"{CLIENT_INTEGRATION_CLOSED}",
+            headers={
+                "Authorization": f"Bearer {client_auth_token}"
+            },
+            json={
+                "security_code": security_code
+            }
+        )
 
-    client_integration_closed_request = requests.post(
-        f"{SERVER_PROTOCOL.lower()}://"
-        f"{SERVER_ADDRESS}:{SERVER_PORT}/"
-        f"{CLIENT_INTEGRATION_CLOSED}",
-        headers={
-            "Authorization": f"Bearer {client_auth_token}"
-        },
-        json={
-            "security_code": security_code
-        }
-    )
+        integration_result = client_integration_closed_request.json()
 
-    integration_result = client_integration_closed_request.json()
+        print()
 
-    print()
+        if integration_result.get("integrated"):
+            success("Entity integrated successfully")
+        else:
+            error("Integration failed")
 
-    if integration_result.get("integrated"):
-        success("Entity integrated successfully")
-    else:
-        error("Integration failed")
-
-    pretty(integration_result)
+        pretty(integration_result)
+        sys.exit(0)
 
 
     # ==========================================================
@@ -323,6 +348,7 @@ async def main():
         success("Tunnel granted")
     else:
         error("Tunnel denied")
+        sys.exit(1)
 
     print(f"\nTunnel Token : {client_tunnel_token}")
     print(f"Tunnel Port  : {client_tunnel_port}")
@@ -332,10 +358,10 @@ async def main():
     # Query for available entities
     info(f"Available entities:")
     client_agents_query_request = requests.post(
-    	f"{SERVER_PROTOCOL.lower()}://{SERVER_ADDRESS}:{SERVER_PORT}/{ENTITIES_AGENT_QUERY}",
-    	json={
-    		"auth_token":client_auth_token
-    	}
+        f"{SERVER_PROTOCOL.lower()}://{SERVER_ADDRESS}:{SERVER_PORT}/{ENTITIES_AGENT_QUERY}",
+        json={
+            "auth_token":client_auth_token
+        }
     )
 
     if len(client_agents_query_request.json().get("entities")) == 0: 
