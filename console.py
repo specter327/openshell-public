@@ -102,6 +102,8 @@ CLIENT_INTEGRATION_CLOSED = "api/v/1/integration/closed"
 CLIENT_TUNNEL_REQUEST = "api/v/1/services/tunnels/request"
 ENTITIES_AGENT_QUERY = "api/v/1/entities/agent/query"
 CLIENT_SESSION_REQUEST = "api/v/1/sessions/request"
+CLIENT_DOMAINS_QUERY = "api/v/1/domains/query"
+OPEN_PASSPORTS_CREATE_REQUEST = "api/v/1/passports/open/create"
 
 
 async def main():
@@ -323,6 +325,170 @@ async def main():
         sys.exit(0)
 
 
+    info(f"Current domains:")
+    client_current_domains_request = requests.post(
+        f"{SERVER_PROTOCOL.lower()}://{SERVER_ADDRESS}:{SERVER_PORT}/{CLIENT_DOMAINS_QUERY}",
+        json={
+            "auth_token":client_auth_token
+        }
+    )
+
+    #print(client_current_domains_request)
+    client_domains = client_current_domains_request.json()
+    if not client_domains:
+        warning(f"Any client domains")
+    else:
+        for domain_uid in client_domains:
+            info(f"    Domain UID: {domain_uid}")
+
+
+    # ==========================================================
+    # OPEN AGENT PASSPORT CREATION
+    # ==========================================================
+    info("Create OPEN AGENT passport?")
+    create_passport = input(">>> ")
+
+
+    if "y" in create_passport.strip().lower():
+
+
+        # ------------------------------------------------------
+        # DOMAIN SELECTION
+        # ------------------------------------------------------
+
+        if not client_domains:
+
+            error(
+                "No domains available"
+            )
+
+            sys.exit(1)
+
+
+        print()
+
+        info(
+            "Select target domain:"
+        )
+
+
+        for index, domain_uid in enumerate(
+            client_domains
+        ):
+
+            print(
+                f"[{index}] {domain_uid}"
+            )
+
+
+        try:
+
+            domain_index = int(
+                input(">>> ")
+            )
+
+            selected_domain = (
+                client_domains[domain_index]
+            )
+
+        except Exception:
+
+            error(
+                "Invalid domain selection"
+            )
+
+            sys.exit(1)
+
+
+
+        # ------------------------------------------------------
+        # CREATE OPEN AGENT PASSPORT
+        # ------------------------------------------------------
+
+        info(
+            "Requesting OPEN AGENT passport..."
+        )
+
+
+        passport_open_create_request = requests.post(
+
+            f"{SERVER_PROTOCOL.lower()}://"
+            f"{SERVER_ADDRESS}:{SERVER_PORT}/"
+            f"{OPEN_PASSPORTS_CREATE_REQUEST}",
+
+            json={
+
+                "auth_token":
+                    client_auth_token,
+
+                "domain_uid":
+                    selected_domain,
+
+                # HARD-CODED SECURITY POLICY
+                # Console can ONLY create agents
+
+                "entity_role":
+                    "AGENT",
+
+                "expiration_hours":
+                    24,
+
+                "usage_limit":
+                    1
+            }
+        )
+
+
+        result = (
+            passport_open_create_request.json()
+        )
+
+
+        if not result.get("created"):
+
+            error(
+                "OPEN passport creation failed"
+            )
+
+            pretty(result)
+
+            sys.exit(1)
+
+
+
+        passport = (
+            result["passport"]
+        )
+
+
+        success(
+            "OPEN AGENT passport created"
+        )
+
+
+        print()
+
+        print(
+            "================================"
+        )
+
+        print(
+            " SECURITY CODE:"
+        )
+
+        print(
+            passport["security_code"]
+        )
+
+        print(
+            "================================"
+        )
+
+
+        print()
+
+        pretty(passport)
+    
     # ==========================================================
     # TUNNEL REQUEST
     # ==========================================================
@@ -364,6 +530,9 @@ async def main():
         }
     )
 
+    #print(client_current_domains_request.json())
+    print("")
+    info(f"Current entities:")
     if len(client_agents_query_request.json().get("entities")) == 0: 
         error("Any entity available")
         sys.exit(0)
@@ -374,6 +543,7 @@ async def main():
             info(f"    Entity type: {entity.get('entity_type')}")
             info(f"    Entity role: {entity.get('role')}")
             info(f"    Entity status: {entity.get('status')}")
+
 
     # ==========================================================
     # READY
