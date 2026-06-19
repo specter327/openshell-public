@@ -121,12 +121,35 @@ async def main():
     global agent_ppik
 
     # ==========================================================
+    # CLI ARGUMENT PARSING
+    # ==========================================================
+
+    regenerate = "--regenerate" in sys.argv
+    integrate_mode = False
+    security_code = None
+
+    if "--integrate" in sys.argv:
+        integrate_mode = True
+        try:
+            idx = sys.argv.index("--integrate")
+            if idx + 1 < len(sys.argv):
+                val = sys.argv[idx + 1]
+                if val.startswith("--"):
+                    error("Error: --integrate requiere un código de seguridad.")
+                    sys.exit(1)
+                security_code = val
+            else:
+                error("Error: --integrate requiere un código de seguridad.")
+                sys.exit(1)
+        except ValueError:
+            error("Error: --integrate requiere un código de seguridad.")
+            sys.exit(1)
+
+    # ==========================================================
     # ENTITY GENERATION / LOADING
     # ==========================================================
 
     header("AGENT IDENTITY")
-
-    regenerate = "--regenerate" in sys.argv
 
     if not os.path.exists(IDENTITY_FILE) or regenerate:
 
@@ -190,7 +213,7 @@ async def main():
 
     print(f"\nUID:\n{agent_uid}")
     print(f"\nPUBLIC KEY:\n{agent_pik}")
-    print(f"\nPRIVATE KEY:\n{agent_ppik[0:25]}")
+    print(f"\nPRIVATE KEY:\n{agent_ppik[:10]}")
 
     # ==========================================================
     # MANAGER DISCOVERY
@@ -362,46 +385,40 @@ async def main():
     # OPEN INTEGRATION
     # ==========================================================
 
-    header("OPEN INTEGRATION")
+    if integrate_mode:
+        header("OPEN INTEGRATION")
 
-    warning(
-        "Enter OPEN passport security code"
-    )
-
-    security_code = input(
-        "\nSECURITY CODE > "
-    ).strip()
-
-    integration_request = requests.post(
-        f"{SERVER_PROTOCOL.lower()}://"
-        f"{SERVER_ADDRESS}:{SERVER_PORT}/"
-        f"{CLIENT_INTEGRATION_OPEN}",
-        headers={
-            "Authorization":
-                f"Bearer {auth_token}"
-        },
-        json={
-            "security_code": security_code,
-            "entity_type": "AGENT"
-        }
-    )
-
-    integration_result = (
-        integration_request.json()
-    )
-
-    print()
-
-    if integration_result.get("integrated"):
-        success(
-            "Agent integrated successfully"
-        )
-    else:
-        error(
-            "Agent integration failed"
+        integration_request = requests.post(
+            f"{SERVER_PROTOCOL.lower()}://"
+            f"{SERVER_ADDRESS}:{SERVER_PORT}/"
+            f"{CLIENT_INTEGRATION_OPEN}",
+            headers={
+                "Authorization":
+                    f"Bearer {auth_token}"
+            },
+            json={
+                "security_code": security_code,
+                "entity_type": "AGENT"
+            }
         )
 
-    pretty(integration_result)
+        integration_result = (
+            integration_request.json()
+        )
+
+        print()
+
+        if integration_result.get("integrated"):
+            success(
+                "Agent integrated successfully"
+            )
+        else:
+            error(
+                "Agent integration failed"
+            )
+
+        pretty(integration_result)
+        sys.exit(0)
 
     # ==========================================================
     # TUNNEL REQUEST
@@ -485,7 +502,6 @@ async def main():
     )
 
     await shell_server.start()
-
 
 
 if __name__ == "__main__":
