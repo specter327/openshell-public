@@ -190,7 +190,7 @@ async def main():
 
     print(f"\nUID:\n{agent_uid}")
     print(f"\nPUBLIC KEY:\n{agent_pik}")
-    print(f"\nPRIVATE KEY:\n{agent_ppik}")
+    print(f"\nPRIVATE KEY:\n{agent_ppik[0:25]}")
 
     # ==========================================================
     # MANAGER DISCOVERY
@@ -347,6 +347,7 @@ async def main():
         success("Authentication successful")
     else:
         error("Authentication failed")
+        sys.exit(1)
 
     pretty(verification)
 
