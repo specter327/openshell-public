@@ -28,6 +28,62 @@ import json
 import os
 import sys
 import asyncio
+import logging
+from logging.handlers import RotatingFileHandler
+from datetime import datetime
+
+# ==========================================================
+# LOGGING CONFIGURATION (CUSTOM ROTATING FILE HANDLER)
+# ==========================================================
+
+class TimestampedRotatingFileHandler(RotatingFileHandler):
+    """
+    Handler personalizado que extiende RotatingFileHandler para renombrar
+    los archivos rotados utilizando la fecha y hora actual en lugar
+    de índices numéricos tradicionales.
+    """
+    def doRollover(self):
+        if self.stream:
+            self.stream.close()
+            self.stream = None
+            
+        if self.backupCount > 0:
+            # Generar sufijo con formato: YYYYMMDD_HHMMSS
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            base_path, ext = os.path.splitext(self.baseFilename)
+            dfn = f"{base_path}_{timestamp}{ext}"
+            
+            if os.path.exists(self.baseFilename):
+                if os.path.exists(dfn):
+                    os.remove(dfn)
+                os.rename(self.baseFilename, dfn)
+                
+        if not self.delay:
+            self.stream = self._open()
+
+# Inicialización del Logger Centralizado
+LOG_FILENAME = "./console.log"
+MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+
+logger = logging.getLogger("OpenShellConsole")
+logger.setLevel(logging.INFO)
+
+# Formato profesional con timestamp, severidad y mensaje
+file_formatter = logging.Formatter(
+    fmt="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+
+# Handler con modo 'a' (append) y capacidad de rotación por tamaño
+file_handler = TimestampedRotatingFileHandler(
+    filename=LOG_FILENAME,
+    mode='a',
+    maxBytes=MAX_BYTES,
+    backupCount=100,  # Límite amplio de retención de históricos rotados
+    encoding='utf-8'
+)
+file_handler.setFormatter(file_formatter)
+logger.addHandler(file_handler)
 
 
 # ==========================================================
@@ -51,26 +107,33 @@ def header(title):
     print(title)
     print("=" * 70)
     print(Colors.RESET)
+    logger.info(f"=== {title} ===")
 
 
 def info(message):
     print(f"{Colors.CYAN}[*]{Colors.RESET} {message}")
+    logger.info(message)
 
 
 def success(message):
     print(f"{Colors.GREEN}[+]{Colors.RESET} {message}")
+    logger.info(f"SUCCESS: {message}")
 
 
 def warning(message):
     print(f"{Colors.YELLOW}[!]{Colors.RESET} {message}")
+    logger.warning(message)
 
 
 def error(message):
     print(f"{Colors.RED}[-]{Colors.RESET} {message}")
+    logger.error(message)
 
 
 def pretty(data):
-    print(json.dumps(data, indent=4, sort_keys=False))
+    formatted_json = json.dumps(data, indent=4, sort_keys=False)
+    print(formatted_json)
+    logger.info(f"Payload Data: {formatted_json}")
 
 
 # ==========================================================
@@ -108,6 +171,8 @@ OPEN_PASSPORTS_CREATE_REQUEST = "api/v/1/passports/open/create"
 
 async def main():
     global console_uid, console_pik, console_ppik
+    
+    logger.info("Initializing OpenShell Console Integration Script.")
     
     # ==========================================================
     # CLI ARGUMENT PARSING
@@ -169,6 +234,8 @@ async def main():
     print(f"\nUID:\n{console_uid}")
     print(f"\nPUBLIC KEY:\n{console_pik}")
     print(f"\nPRIVATE KEY:\n{console_ppik[0:10]}")
+    
+    logger.info(f"Identity Loaded - UID: {console_uid}")
 
 
     # ==========================================================
@@ -221,6 +288,8 @@ async def main():
     print(f"FINGERPRINT : {manager_pik_fingerprint}")
     print("\nPUBLIC KEY:\n")
     print(manager_pik)
+    
+    logger.info(f"Manager Discovered - UID: {manager_uid}, Name: {manager_name}, Type: {manager_type}")
 
 
     # ==========================================================
@@ -329,11 +398,10 @@ async def main():
     client_current_domains_request = requests.post(
         f"{SERVER_PROTOCOL.lower()}://{SERVER_ADDRESS}:{SERVER_PORT}/{CLIENT_DOMAINS_QUERY}",
         json={
-            "auth_token":client_auth_token
+            "auth_token": client_auth_token
         }
     )
 
-    #print(client_current_domains_request)
     client_domains = client_current_domains_request.json()
     if not client_domains:
         warning(f"Any client domains")
@@ -351,140 +419,63 @@ async def main():
 
     if "y" in create_passport.strip().lower():
 
-
         # ------------------------------------------------------
         # DOMAIN SELECTION
         # ------------------------------------------------------
 
         if not client_domains:
-
-            error(
-                "No domains available"
-            )
-
+            error("No domains available")
             sys.exit(1)
-
 
         print()
+        info("Select target domain:")
 
-        info(
-            "Select target domain:"
-        )
-
-
-        for index, domain_uid in enumerate(
-            client_domains
-        ):
-
-            print(
-                f"[{index}] {domain_uid}"
-            )
-
+        for index, domain_uid in enumerate(client_domains):
+            print(f"[{index}] {domain_uid}")
 
         try:
-
-            domain_index = int(
-                input(">>> ")
-            )
-
-            selected_domain = (
-                client_domains[domain_index]
-            )
-
-        except Exception:
-
-            error(
-                "Invalid domain selection"
-            )
-
+            domain_index = int(input(">>> "))
+            selected_domain = client_domains[domain_index]
+            logger.info(f"Domain selected index: {domain_index} (UID: {selected_domain})")
+        except Exception as e:
+            error("Invalid domain selection")
+            logger.error(f"Domain selection exception: {str(e)}")
             sys.exit(1)
-
-
 
         # ------------------------------------------------------
         # CREATE OPEN AGENT PASSPORT
         # ------------------------------------------------------
 
-        info(
-            "Requesting OPEN AGENT passport..."
-        )
-
+        info("Requesting OPEN AGENT passport...")
 
         passport_open_create_request = requests.post(
-
             f"{SERVER_PROTOCOL.lower()}://"
             f"{SERVER_ADDRESS}:{SERVER_PORT}/"
             f"{OPEN_PASSPORTS_CREATE_REQUEST}",
-
             json={
-
-                "auth_token":
-                    client_auth_token,
-
-                "domain_uid":
-                    selected_domain,
-
-                # HARD-CODED SECURITY POLICY
-                # Console can ONLY create agents
-
-                "entity_role":
-                    "AGENT",
-
-                "expiration_hours":
-                    24,
-
-                "usage_limit":
-                    1
+                "auth_token": client_auth_token,
+                "domain_uid": selected_domain,
+                "entity_role": "AGENT",
+                "expiration_hours": 24,
+                "usage_limit": 1
             }
         )
 
-
-        result = (
-            passport_open_create_request.json()
-        )
-
+        result = passport_open_create_request.json()
 
         if not result.get("created"):
-
-            error(
-                "OPEN passport creation failed"
-            )
-
+            error("OPEN passport creation failed")
             pretty(result)
-
             sys.exit(1)
 
-
-
-        passport = (
-            result["passport"]
-        )
-
-
-        success(
-            "OPEN AGENT passport created"
-        )
-
+        passport = result["passport"]
+        success("OPEN AGENT passport created")
 
         print()
-
-        print(
-            "================================"
-        )
-
-        print(
-            " SECURITY CODE:"
-        )
-
-        print(
-            passport["security_code"]
-        )
-
-        print(
-            "================================"
-        )
-
-
+        print("================================")
+        print(" SECURITY CODE:")
+        print(passport["security_code"])
+        print("================================")
         print()
 
         pretty(passport)
@@ -521,23 +512,22 @@ async def main():
     print(f"Tunnel Addr  : {SERVER_ADDRESS}:{client_tunnel_port}")
 
     print("")
-    # Query for available entities
     info(f"Available entities:")
     client_agents_query_request = requests.post(
         f"{SERVER_PROTOCOL.lower()}://{SERVER_ADDRESS}:{SERVER_PORT}/{ENTITIES_AGENT_QUERY}",
         json={
-            "auth_token":client_auth_token
+            "auth_token": client_auth_token
         }
     )
 
-    #print(client_current_domains_request.json())
     print("")
     info(f"Current entities:")
-    if len(client_agents_query_request.json().get("entities")) == 0: 
+    entities_response = client_agents_query_request.json().get("entities")
+    if entities_response is None or len(entities_response) == 0: 
         error("Any entity available")
         sys.exit(0)
     else: 
-        for entity in client_agents_query_request.json().get("entities"): 
+        for entity in entities_response: 
             info(f"    Entity UID: {entity.get('entity_uid')}")
             info(f"    Domain UID: {entity.get('domain_uid')}")
             info(f"    Entity type: {entity.get('entity_type')}")
@@ -564,7 +554,6 @@ async def main():
 
     await communication.connect()
 
-    # Request session with the selected agent
     info("Specify the agent to establish connection:")
     agent_uid = input(">>> ")
 
@@ -572,9 +561,9 @@ async def main():
     client_session_request = requests.post(
         f"{SERVER_PROTOCOL.lower()}://{SERVER_ADDRESS}:{SERVER_PORT}/{CLIENT_SESSION_REQUEST}",
         json={
-            "auth_token":client_auth_token,
-            "tunnel_token":client_tunnel_token,
-            "destination_uid":agent_uid
+            "auth_token": client_auth_token,
+            "tunnel_token": client_tunnel_token,
+            "destination_uid": agent_uid
         }
     )
 
@@ -604,4 +593,8 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception as ex:
+        logger.critical(f"Unhandled script execution failure: {str(ex)}", exc_info=True)
+        raise ex

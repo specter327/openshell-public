@@ -1,0 +1,11 @@
+{
+    "identification": {
+        "uid": "019edee2-3fc0-7fc1-ad7f-96cafd18aaa2"
+    },
+    "cryptographic_identity": {
+        "public_key": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAUI+kxyxuFKINYP7GU/scFDxFAfznh697UXf7+8we/NQ=\n-----END PUBLIC KEY-----\n",
+        "private_key": "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIMR6du9olIuuGpW3jsXB6bEZxjTVkP+msIoIJdD/fOcD\n-----END PRIVATE KEY-----\n",
+        "algorithm": "ed25519"
+    },
+    "name": "Console"
+}
