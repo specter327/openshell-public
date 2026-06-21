@@ -1,64 +1,208 @@
-# manager/subsystems/tunnel.py
+# ==========================================================
+# OpenShell Console
+# Tunnel Manager Subsystem
+# ==========================================================
 
-from shared.osam.tunnels import TunnelsAPI
+
 from ..service import Subsystem
+from ...shared.api.manager.v1 import OSAMClient
+
 
 class TunnelManager(Subsystem):
     """
-    Gestión del ciclo de vida del túnel.
+    Tunnel management subsystem.
 
-    Responsabilidades:
-    - Solicitar túnel
-    - Guardar estado en runtime
-    - Exponer información del túnel
+    Responsibilities:
+        - Request communication tunnel
+        - Store tunnel runtime state
+        - Expose tunnel information
 
-    No:
-    - abrir sockets
-    - crear sesiones
-    - ejecutar shell
+    Does NOT:
+        - Perform HTTP directly
+        - Open sockets
+        - Create sessions
+        - Handle shell communication
     """
-    async def request(self):
+
+
+
+    # ======================================================
+    # TUNNEL REQUEST
+    # ======================================================
+
+    async def request_tunnel(
+        self
+    ) -> dict:
+        """
+        Request communication tunnel.
+
+        Flow:
+
+            Console
+              |
+              v
+            TunnelManager
+              |
+              v
+            OSAMClient
+              |
+              v
+            TunnelsAPI.request()
+              |
+              v
+            Manager Server
+
+
+        Requires:
+
+            runtime.authenticated == True
+
+
+        Stores:
+
+            runtime.tunnel_token
+            runtime.tunnel_host
+            runtime.tunnel_port
+
+
+        Returns:
+
+            Tunnel information dictionary
+        """
+
+
+        #
+        # Validate authentication state
+        #
 
         if not self.runtime.authenticated:
+
             raise RuntimeError(
-                "Authentication required"
+                "Console is not authenticated"
             )
 
 
-        tunnel = await self.client.tunnels.request(
+
+        if not self.runtime.auth_token:
+
+            raise RuntimeError(
+                "Missing authentication token"
+            )
+
+
+
+        #
+        # Use SDK client
+        #
+
+        client = OSAMClient(
+            host=self.runtime.manager_address,
+            port=self.runtime.manager_port,
+            protocol=self.runtime.manager_protocol
+        )
+
+        tunnel_response = await client.tunnels.request(
             auth_token=self.runtime.auth_token
         )
 
+        print(tunnel_response)
 
-        if not tunnel.tunnel_token:
+
+        #
+        # Validate server response
+        #
+
+        if not tunnel_response:
+
             raise RuntimeError(
-                "Tunnel request failed"
+                "Empty tunnel response"
             )
 
 
-        self.runtime.set_tunnel(
-            tunnel_token=tunnel.tunnel_token,
-            tunnel_host=tunnel.host,
-            tunnel_port=tunnel.port
+
+        tunnel_token = (
+            tunnel_response
+            .get("tunnel_token")
         )
 
 
-        return tunnel
+        if not tunnel_token:
+
+            raise RuntimeError(
+                "Tunnel authorization failed"
+            )
 
 
-    def status(self):
+
+        #
+        # Store runtime state
+        #
+
+        self.runtime.set_tunnel(
+
+            tunnel_token=tunnel_token,
+
+            tunnel_host=(
+                self.runtime.manager_address
+            ),
+
+            tunnel_port=(
+                tunnel_response
+                .get("tunnel_port")
+            )
+        )
+
+
+
+        return tunnel_response
+
+
+
+    # ======================================================
+    # TUNNEL STATUS
+    # ======================================================
+
+    def status(
+        self
+    ) -> dict:
+        """
+        Return current tunnel runtime state.
+        """
+
 
         return {
 
             "authorized":
                 self.runtime.tunnel_authorized,
 
+
             "token":
                 self.runtime.tunnel_token,
+
 
             "host":
                 self.runtime.tunnel_host,
 
+
             "port":
                 self.runtime.tunnel_port
         }
+
+
+
+    # ======================================================
+    # TUNNEL CLEAR
+    # ======================================================
+
+    def clear(
+        self
+    ) -> bool:
+        """
+        Remove current tunnel state.
+        """
+
+
+        self.runtime.clear_tunnel()
+
+
+        return True

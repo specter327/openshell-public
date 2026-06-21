@@ -11,9 +11,13 @@ from src.subsystems.identity import (
 )
 
 from src.subsystems.manager import ManagerSubsystem
-from src.subsystems.domain import (
-    DomainManager
-)
+from src.subsystems.domain import DomainManager
+from src.subsystems.tunnel import TunnelManager
+from src.subsystems.session import SessionManager
+from src.subsystems.app import AppManager
+from src.subsystems.communication import CommunicationSubsystem
+from src.subsystems.app.shell import ShellApplication
+
 
 from .runtime import CoreRuntime
 
@@ -48,6 +52,22 @@ class ConsoleCore:
             self
         )
 
+        self.tunnel = TunnelManager(
+            self
+        )
+
+        self.session = SessionManager(
+            self
+        )
+
+        self.app = AppManager(
+            self
+        )
+
+        self.communication = CommunicationSubsystem(
+            self
+        )
+
         # --------------------------------------------------
         # Registry
         # --------------------------------------------------
@@ -65,4 +85,29 @@ class ConsoleCore:
         self.services.register(
             "domain",
             self.domain
+        )
+
+        self.services.register(
+            "tunnel",
+            self.tunnel
+        )
+
+        self.services.register(
+            "session",
+            self.session
+        )
+
+        self.services.register(
+            "app",
+            self.app
+        )
+
+        self.app.register(
+            "shell",
+            ShellApplication
+        )
+
+        self.services.register(
+            "communication",
+            self.communication
         )

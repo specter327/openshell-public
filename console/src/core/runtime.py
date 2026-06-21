@@ -60,6 +60,7 @@ class CoreRuntime:
         #
 
         self.tunnel_authorized = False
+        self.communication_connected: bool = False
 
         self.tunnel_token = None
         self.tunnel_host = None

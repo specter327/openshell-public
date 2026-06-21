@@ -15,6 +15,8 @@ from .commands.authentication import register as authentication
 from .commands.integration import register as integration
 from .commands.passports import register as passports
 from .commands.entities import register as entities
+from .commands.shell import register as shell
+from .commands.communication import register as communication
 
 class ConsoleApplication:
 
@@ -57,6 +59,8 @@ class ConsoleApplication:
         integration(self.router)
         passports(self.router)
         entities(self.router)
+        shell(self.router)
+        communication(self.router)
 
         await self.shell.start()
 

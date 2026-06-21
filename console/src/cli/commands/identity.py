@@ -7,6 +7,7 @@
 from shared.identity.identification import (
     EntityIdentity
 )
+from shared.cryptography.keys import Ed25519KeyFormats
 
 from pathlib import Path
 
@@ -97,7 +98,10 @@ class IdentityCommand:
         console_public_profile = console_profile.get("public")
         console_private_profile = console_profile.get("private")
         print(f"[*] Console UID: {console_public_profile.get('identification').get('uid')}")
-        print(f"[*] Console PIK: {console_public_profile.get('cryptographic_identity').get('public_key')}")
+        console_public_key = console_public_profile.get('cryptographic_identity').get('public_key')
+        console_public_key_normalized = Ed25519KeyFormats.to_process(console_public_key)
+
+        print(f"[*] Console PIK (HEX): {console_public_key_normalized}")
         print(f"[*] Console name: {console_public_profile.get('name')}")
         print(f"[*] PIK Algorithm: {console_public_profile.get('cryptographic_identity').get('algorithm')}")
         print(f"[*] PIK fingerprint: {console_public_profile.get('cryptographic_identity').get('fingerprint')}")
