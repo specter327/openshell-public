@@ -92,78 +92,15 @@ class IdentityCommand:
         args
     ):
 
-
-        print(
-            "[*] Loading identity"
-        )
-
-
-        if not context.identity_exists():
-
-            print(
-                "[!] Console identity not found"
-            )
-
-            return
-
-
-
-        identity = (
-            context.identity_store.load_public()
-        )
-
-
-
-        print()
-
-        print(
-            "=============================="
-        )
-
-        print(
-            " CONSOLE IDENTITY"
-        )
-
-        print(
-            "=============================="
-        )
-
-
-        print(
-            f"NAME:"
-        )
-
-        print(
-            identity.get("name")
-        )
-
-
-        print(
-            "\nUID:"
-        )
-
-        print(
-            identity
-            ["identification"]
-            ["uid"]
-        )
-
-
-        print(
-            "\nPUBLIC KEY:"
-        )
-
-
-        print(
-            identity
-            ["cryptographic_identity"]
-            ["public_key"]
-        )
-
-
-        print(
-            "=============================="
-        )
+        #print(context.core.runtime.console_profile)
+        console_profile = context.core.runtime.console_profile
+        console_public_profile = console_profile.get("public")
+        console_private_profile = console_profile.get("private")
+        print(f"[*] Console UID: {console_public_profile.get('identification').get('uid')}")
+        print(f"[*] Console PIK: {console_public_profile.get('cryptographic_identity').get('public_key')}")
+        print(f"[*] Console name: {console_public_profile.get('name')}")
+        print(f"[*] PIK Algorithm: {console_public_profile.get('cryptographic_identity').get('algorithm')}")
+        print(f"[*] PIK fingerprint: {console_public_profile.get('cryptographic_identity').get('fingerprint')}")
 
 
 

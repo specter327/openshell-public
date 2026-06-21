@@ -18,10 +18,11 @@
 # LIBRARIES
 # ==========================================================
 
-from shared.identity.identification import EntityIdentity
-from shared.protocols.negotiation.challenge import ChallengeProtocol
-from utils import CommunicationHandler
-from shell.server import ShellServer
+from src.shared.identity.identification import EntityIdentity
+from src.shared.protocols.negotiation.challenge import ChallengeProtocol
+from src.shared.modules.utils import CommunicationHandler
+from src.shared.modules.shell.server import ShellServer
+from src.shared.identity.identification import EntityIdentity
 
 import requests
 import json
@@ -78,7 +79,7 @@ def pretty(data):
 # CONFIGURATION
 # ==========================================================
 
-SERVER_ADDRESS = "fortaprest.org"
+SERVER_ADDRESS = "localhost"
 SERVER_PORT = 8000
 SERVER_PROTOCOL = "HTTP"
 

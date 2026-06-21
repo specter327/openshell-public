@@ -1,4 +1,20 @@
+# ==========================================================
+# OpenShell Console
+# Domain Commands
+# ==========================================================
+
+
+def register(router):
+
+    router.register(
+        "domains",
+        DomainsCommand()
+    )
+
+
+
 class DomainsCommand:
+
 
 
     async def execute(
@@ -14,24 +30,127 @@ class DomainsCommand:
 
 
 
-        if args[0]=="query":
+        command = args[0]
 
-            context.output.info(
-                "Query domains"
+
+        handlers = {
+
+            "list":
+                self.list_domains,
+
+            "status":
+                self.status
+
+        }
+
+
+
+        handler = handlers.get(
+            command
+        )
+
+
+        if handler:
+
+            return await handler(
+                context,
+                args[1:]
             )
 
 
-        elif args[0]=="integrate":
+        context.output.error(
+            "Unknown domains command"
+        )
 
-            context.output.info(
-                "Integrate domain"
+
+
+    async def list_domains(
+        self,
+        context,
+        args
+    ):
+
+
+        context.output.info(
+            "Querying domains..."
+        )
+
+
+        manager = (
+            context.core
+            .services
+            .get("domain")
+        )
+
+
+        try:
+
+            domains = await (
+                manager.query()
             )
 
+
+            if not domains:
+
+                context.output.warning(
+                    "No domains available"
+                )
+
+                return
+
+
+
+            context.output.success(
+                f"Domains: {len(domains)}"
+            )
+
+
+            for domain in domains:
+
+                print()
+
+                context.output.info(f"Domain UID: {domain}")
+
+                #context.output.info(
+                #    f"UID: {domain.uid}"
+                #)
+
+                #context.output.info(
+                #    f"Name: {domain.name}"
+                #)
+
+
+
+        except Exception as e:
+
+            context.output.error(
+                str(e)
+            )
+
+
+
+    async def status(
+        self,
+        context,
+        args
+    ):
+
+
+        runtime = (
+            context.core.runtime
+        )
+
+
+        if runtime.current_domain_uid:
+
+            context.output.info(
+                f"Current domain: {runtime.current_domain_uid}"
+            )
 
         else:
 
-            context.output.error(
-                "Unknown domains command"
+            context.output.warning(
+                "No domain selected"
             )
 
 
@@ -40,19 +159,16 @@ class DomainsCommand:
 
         print(
 """
-domains:
+domains commands:
 
-query
+domains list
 
-integrate
+    List available domains.
+
+
+domains status
+
+    Show current domain.
+
 """
         )
-
-
-
-def register(router):
-
-    router.register(
-        "domains",
-        DomainsCommand()
-    )
