@@ -11,6 +11,11 @@
 git clone https://github.com/specter327/openshell-public.git; bash openshell-public/scripts/install.sh
 ```
 
+# Desinstalacion
+```
+cd openshell-public/scripts; bash uninstall.sh
+```
+
 ## 📋 RESUMEN DE UNA PÁGINA
 
 **OpenShell** es un framework de acceso remoto a shell (terminal) que permite a operadores conectarse de forma segura a máquinas remotas a través de un coordinador central. Utiliza criptografía moderna (Ed25519), elimina la necesidad de gestionar credenciales de sistema operativo, y proporciona auditoría centralizada de todas las sesiones.
