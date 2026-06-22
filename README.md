@@ -7,12 +7,12 @@
 ---
 
 # Instalacion
-```
+```bash
 git clone https://github.com/specter327/openshell-public.git; bash openshell-public/scripts/install.sh
 ```
 
 # Desinstalacion
-```
+```bash
 cd openshell-public/scripts; bash uninstall.sh
 ```
 
