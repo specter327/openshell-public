@@ -38,6 +38,6 @@ fi
 echo "Reload shell or execute:"
 
 echo "source ~/.bashrc"
-
+source ~/.bashrc
 
 echo "Installation completed"
