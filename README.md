@@ -7,8 +7,8 @@
 ---
 
 # Instalacion
-```
-$ git clone https://github.com/specter327/openshell-public.git; bash openshell-public/scripts/install.sh
+$ ```
+git clone https://github.com/specter327/openshell-public.git; bash openshell-public/scripts/install.sh
 ```
 
 ## 📋 RESUMEN DE UNA PÁGINA
