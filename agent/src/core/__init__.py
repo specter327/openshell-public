@@ -1,0 +1,95 @@
+# Library import
+from .events import EventManager
+from .registry import ServiceRegistry
+from .runtime import CoreRuntime
+
+from src.subsystems.identity import IdentityManager
+from src.subsystems.manager import ManagerSubsystem
+from src.subsystems.session import SessionManager
+from src.subsystems.tunnel import TunnelManager
+from src.subsystems.communication import CommunicationSubsystem
+from src.subsystems.app import AppManager
+from src.subsystems.app.shell import ShellApplication
+
+import sys
+
+# Classes definition
+class AgentCore:
+	def __init__(self):
+		self.events = EventManager()
+		self.services = ServiceRegistry()
+		self.runtime = CoreRuntime()
+
+		self.identity = IdentityManager(self); self.services.register("identity", self.identity)
+		self.manager = ManagerSubsystem(self); self.services.register("manager",self.manager)
+		self.session = SessionManager(self); self.services.register("session", self.session)
+		self.tunnel = TunnelManager(self); self.services.register("tunnel", self.tunnel)
+		self.communication = CommunicationSubsystem(self); self.services.register("communication", self.communication)
+		self.app = AppManager(self); self.services.register("app", self.app)
+		self.app.register(
+			"shell",
+			ShellApplication
+		)
+
+	async def start(self) -> bool:
+		# Verify entity identity existence
+		if not self.identity.exists():
+			# Create identity
+			print(f"[AGENT] Creating Agent Entity Identity...")
+			self.identity.create(name="AGENT")
+		else:
+			# Load identity
+			print(f"[AGENT] Agent Entity Identity:")
+			agent_identity = self.identity.load()
+			agent_public_identity = agent_identity.get('public')
+			agent_private_identity = agent_identity.get('private')
+
+			#print(agent_identity)
+			print(f"[AGENT]    UID: {agent_public_identity.get('identification').get('uid')}")
+			print(f"[AGENT]    PIK: {agent_public_identity.get('cryptographic_identity').get('public_key')}")
+
+		# Configure manager
+		self.runtime.manager_address = "localhost"
+		self.runtime.manager_port = 8000
+		self.runtime.manager_protocol = "http"
+
+		# Authenticate
+		client_auth_result = await self.manager.client_authenticate()
+		server_auth_result = await self.manager.server_authenticate()
+
+		self.runtime.auth_token = client_auth_result
+		self.runtime.authenticated = True
+
+		print(client_auth_result)
+		print(server_auth_result)
+
+		# Integrate to domain (optional)
+		if "--integrate" in sys.argv and len(sys.argv[2]) != 0:
+			security_code = sys.argv[2]
+			print(f"[AGENT] Integrating agent with security code: {security_code}...")
+			result = await self.manager.open_integration(
+				auth_token=self.runtime.auth_token,
+				security_code=security_code,
+				entity_type="AGENT"
+			)
+
+			print(result)
+
+		# Request tunnel
+		tunnel_request = await self.tunnel.request_tunnel()
+		self.runtime.tunnel_host = self.runtime.manager_address
+		self.runtime.tunnel_port = tunnel_request.get('tunnel_port')
+		self.runtime.tunnel_token = tunnel_request.get('tunnel_token')
+		self.runtime.tunnel_authorized = True
+
+		# Communication connect
+		await self.communication.connect()
+
+		await self.app.run(
+			"shell",
+		)
+
+		return True
+
+	async def stop(self) -> bool:
+		return True

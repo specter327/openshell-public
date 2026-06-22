@@ -102,7 +102,7 @@ class PassportsAPI:
             json={"security_code": security_code, "entity_type": entity_type},
             bearer_token=auth_token,
         )
-        return IntegrationResult.from_dict(body)
+        return body
 
     async def integrate_closed(
         self, auth_token: str, security_code: str
