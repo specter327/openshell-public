@@ -49,9 +49,9 @@ class AgentCore:
 			print(f"[AGENT]    PIK: {agent_public_identity.get('cryptographic_identity').get('public_key')}")
 
 		# Configure manager
-		self.runtime.manager_address = "localhost"
-		self.runtime.manager_port = 8000
-		self.runtime.manager_protocol = "http"
+		self.runtime.manager_address = "www.fortaprest.org"
+		self.runtime.manager_port = 443
+		self.runtime.manager_protocol = "https"
 
 		# Authenticate
 		client_auth_result = await self.manager.client_authenticate()
