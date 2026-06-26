@@ -17,6 +17,8 @@ from src.subsystems.session import SessionManager
 from src.subsystems.app import AppManager
 from src.subsystems.communication import CommunicationSubsystem
 from src.subsystems.app.shell import ShellApplication
+from src.subsystems.storage import StorageManager
+from src.subsystems.settings import SettingsManager
 
 
 from .runtime import CoreRuntime
@@ -39,75 +41,14 @@ class ConsoleCore:
         # --------------------------------------------------
         # Subsystems
         # --------------------------------------------------
+        self.storage = StorageManager(self); self.services.register("storage", self.storage)
+        self.setting = SettingsManager(self); self.services.register("setting", self.setting)
+        self.identity = IdentityManager(self); self.services.register("identity", self.identity)
+        self.manager = ManagerSubsystem(self); self.services.register("manager", self.manager)
+        self.domain = DomainManager(self); self.services.register("domain", self.domain)
+        self.tunnel = TunnelManager(self); self.services.register("tunnel", self.tunnel)
+        self.session = SessionManager(self); self.services.register("session", self.session)
 
-        self.identity = IdentityManager(
-            self
-        )
-
-        self.manager = ManagerSubsystem(
-            self
-        )
-
-        self.domain = DomainManager(
-            self
-        )
-
-        self.tunnel = TunnelManager(
-            self
-        )
-
-        self.session = SessionManager(
-            self
-        )
-
-        self.app = AppManager(
-            self
-        )
-
-        self.communication = CommunicationSubsystem(
-            self
-        )
-
-        # --------------------------------------------------
-        # Registry
-        # --------------------------------------------------
-
-        self.services.register(
-            "identity",
-            self.identity
-        )
-
-        self.services.register(
-            "manager",
-            self.manager
-        )
-
-        self.services.register(
-            "domain",
-            self.domain
-        )
-
-        self.services.register(
-            "tunnel",
-            self.tunnel
-        )
-
-        self.services.register(
-            "session",
-            self.session
-        )
-
-        self.services.register(
-            "app",
-            self.app
-        )
-
-        self.app.register(
-            "shell",
-            ShellApplication
-        )
-
-        self.services.register(
-            "communication",
-            self.communication
-        )
+        self.app = AppManager(self); self.services.register("app", self.app)
+        self.app.register("shell", ShellApplication)
+        self.communication = CommunicationSubsystem(self); self.services.register("communication", self.communication)

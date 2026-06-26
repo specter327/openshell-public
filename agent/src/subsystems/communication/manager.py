@@ -9,11 +9,19 @@ from ...shared.modules.utils import (
     CommunicationHandler
 )
 
+import fsresource_tree as fs
+import json
 
 class CommunicationSubsystem(
     Subsystem
 ):
-
+    COMM_DATA_DIR: fs.Directory = fs.Directory(
+        name="communication"
+    )
+    KNOWN_PEERS_FILE: fs.File = fs.File(
+        name="peers",
+        extension="json"
+    )
 
     def __init__(
         self,
@@ -26,10 +34,67 @@ class CommunicationSubsystem(
         self.handler = None
         self.connected = False
 
+        self.storage = self.services.get("storage")
 
-    # ======================================================
-    # CONNECT
-    # ======================================================
+    async def _initialize(self) -> bool:
+        self.storage.storage_schema.storage_tree.register(
+            self.COMM_DATA_DIR,
+            parent=self.storage.storage_schema.DATA_ROOT
+        )
+        self.storage.storage_schema.storage_tree.register(
+            self.KNOWN_PEERS_FILE,
+            parent=self.COMM_DATA_DIR
+        )
+
+        fs.operations.create(
+            resource=self.COMM_DATA_DIR,
+            recursive_children=True
+        )
+
+        return True
+
+    async def _load_peers_file(self) -> dict | bool:
+        try:
+            with open(
+                    file=fs.operations.path(self.KNOWN_PEERS_FILE),
+                    mode='r',
+                    encoding="UTF-8"
+                ) as file:
+
+                data = file.read()
+            
+            return json.loads(
+                data
+            )
+        except Exception as Error:
+            print(Error)
+            return False
+
+    async def _update_peers_file(self, data: dict) -> bool:
+        try:
+            with  open(
+                file=fs.operations.path(self.KNOWN_PEERS_FILE),
+                mode='w',
+                encoding="UTF-8"
+            ) as file:
+                file.write(
+                    json.dumps(data)
+                )
+
+
+        except Exception as Error:
+            print(Error)
+            return False
+
+    async def query_peers(self) -> dict:
+        return await self._load_peers_file()
+
+    async def update_peers(self, peers: dict) -> bool:
+        return await self._update_peers_file(peers)
+
+    async def start(self) -> bool:
+        await self._initialize()
+        return True
 
     async def connect(
         self

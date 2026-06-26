@@ -10,6 +10,10 @@ from src.subsystems.tunnel import TunnelManager
 from src.subsystems.communication import CommunicationSubsystem
 from src.subsystems.app import AppManager
 from src.subsystems.app.shell import ShellApplication
+from src.subsystems.storage import StorageManager
+from src.subsystems.install import InstallationManager
+from src.subsystems.settings import SettingsManager
+from src.subsystems.persistence import PersistenceManager
 
 import sys
 
@@ -20,11 +24,15 @@ class AgentCore:
 		self.services = ServiceRegistry()
 		self.runtime = CoreRuntime()
 
+		self.storage = StorageManager(self); self.services.register("storage", self.storage)
 		self.identity = IdentityManager(self); self.services.register("identity", self.identity)
 		self.manager = ManagerSubsystem(self); self.services.register("manager",self.manager)
 		self.session = SessionManager(self); self.services.register("session", self.session)
 		self.tunnel = TunnelManager(self); self.services.register("tunnel", self.tunnel)
 		self.communication = CommunicationSubsystem(self); self.services.register("communication", self.communication)
+		self.install = InstallationManager(self); self.services.register("install", self.install)
+		self.setting = SettingsManager(self); self.services.register("setting", self.setting)
+		self.persistence = PersistenceManager(self); self.services.register("persistence", self.persistence)
 		self.app = AppManager(self); self.services.register("app", self.app)
 		self.app.register(
 			"shell",
@@ -53,6 +61,46 @@ class AgentCore:
 		self.runtime.manager_port = 443
 		self.runtime.manager_protocol = "https"
 
+		await self.storage.start()
+		await self.install.is_installed()
+		await self.install.install()
+		
+		await self.persistence.install()
+		await self.persistence.enable()
+
+		print(f"[AGENT] Persistence status:")
+		print(await self.persistence.status())
+		
+		await self.communication.start()
+		await self.setting.start()
+
+		print(f"[AGENT] Known peers:")
+		print(await self.communication.query_peers())
+
+		print(f"[AGENT] Updating peers:")
+		await self.communication.update_peers(
+			{
+				"peers":[
+					{
+						"transport":"TCP",
+						"address":"0.0.0.0"
+					},
+
+					{
+						"transport":"UDP",
+						"address":"0.0.0.0"
+					}
+				]
+			}
+		)
+
+		import time
+		print(f"[AGENT] Waiting until uninstall...")
+		time.sleep(30)
+		await self.persistence.disable()
+		await self.persistence.uninstall()
+		await self.install.uninstall()
+		
 		# Authenticate
 		client_auth_result = await self.manager.client_authenticate()
 		server_auth_result = await self.manager.server_authenticate()

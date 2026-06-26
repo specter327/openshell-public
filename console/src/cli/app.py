@@ -62,6 +62,13 @@ class ConsoleApplication:
         shell(self.router)
         communication(self.router)
 
+        import fsresource_tree as fs
+        await self.core.storage.start()
+        await self.core.communication.start()
+        print(fs.renderers.mermaid(
+            resource=self.core.storage.storage_schema.UNIT_ROOT
+        ))
+
         await self.shell.start()
 
         return
