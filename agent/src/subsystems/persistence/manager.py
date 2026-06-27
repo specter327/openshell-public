@@ -28,7 +28,7 @@ class PersistenceManager(Subsystem):
     # =====================================================
 
     async def install(self,
-        executable: fs.File
+        executable
     ) -> bool:
 
         storage_service = self.services.get("storage")
