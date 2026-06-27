@@ -3,7 +3,6 @@ import subprocess
 
 from ..service import Subsystem
 
-
 class PersistenceManager(Subsystem):
 
     SERVICE_NAME = "openshell-agent"
@@ -24,17 +23,16 @@ class PersistenceManager(Subsystem):
             / f"{self.SERVICE_NAME}.service"
         )
 
-    @property
-    def executable(self) -> str:
-        return str(
-            Path.cwd() / "agent"
-        )
-
     # =====================================================
     # INSTALL
     # =====================================================
 
-    async def install(self) -> bool:
+    async def install(self,
+        executable: fs.File
+    ) -> bool:
+
+        storage_service = self.services.get("storage")
+        program_path = storage_service.storage_schema.file_system.operations.path(executable)
 
         self.service_directory.mkdir(
             parents=True,
@@ -48,7 +46,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-ExecStart={self.executable}
+ExecStart={program_path}
 Restart=always
 RestartSec=5
 

@@ -63,9 +63,11 @@ class AgentCore:
 
 		await self.storage.start()
 		await self.install.is_installed()
-		await self.install.install()
+		program = await self.install.install()
 		
-		await self.persistence.install()
+		await self.persistence.install(
+			executable=program
+		)
 		await self.persistence.enable()
 
 		print(f"[AGENT] Persistence status:")

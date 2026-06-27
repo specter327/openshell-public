@@ -1,67 +1,193 @@
 # Library import
-from ..service import Subsystem
+from pathlib import Path
+import shutil
+import sys
+
 import fsresource_tree as fs
 
-# Classes definition
+from ..service import Subsystem
+
+
 class InstallationManager(Subsystem):
-	INSTALL_FLAG: fs.File = fs.File(
-		name="installed",
-		extension="flag"
-	)
 
-	async def install(self) -> bool:
-		# Get the storage service
-		storage_service = self.core.services.get("storage")
+    INSTALL_FLAG = fs.File(
+        name="installed",
+        extension="flag"
+    )
 
-		# Verify current installation
-		if await self.is_installed(): return True
+    # =====================================================
+    # PROGRAM
+    # =====================================================
 
-		storage_service.storage_schema.file_system.operations.create(
-			resource=self.INSTALL_FLAG,
-			recursive_parent=True
-		)
+    def get_source_program(self) -> Path:
+        """
+        Returns the executable currently running.
 
-		print(f"[INSTALL-MANAGER] Flag file successfully created")
-		print(storage_service.storage_schema.file_system.renderers.mermaid(storage_service.storage_schema.UNIT_ROOT))
+        Interpreted:
+            python agent.py
 
-		return True
+        PyInstaller:
+            ./agent
+        """
 
-	async def uninstall(self) -> bool:
-		# Get the storage service
-		storage_service = self.core.services.get("storage")
+        if getattr(sys, "frozen", False):
+            return Path(sys.executable)
 
-		# Delete the agent structure
-		print(f"[INSTALL-MANAGER] Deleting: {storage_service.storage_schema.file_system.operations.path(storage_service.storage_schema.AGENT_ROOT)}...")
-		storage_service.storage_schema.file_system.operations.delete(
-			resource=storage_service.storage_schema.AGENT_ROOT,
-			recursive_children=True
-		)
+        return Path(sys.argv[0]).resolve()
 
-		print(f"[INSTALL-MANAGER] Directory successfully deleted")
+    def get_program_resource(self) -> fs.File:
 
-		return True
+        return fs.File(
+            name="agent"
+        )
 
-	async def is_installed(self) -> bool:
-		# Get the storage service
-		storage_service = self.core.services.get("storage")
+    # =====================================================
+    # INSTALL
+    # =====================================================
 
-		# Register installation flag file
-		if not storage_service.storage_schema.storage_tree.registered(
-			resource=self.INSTALL_FLAG
-		):
-			print(f"[INSTALL-MANAGER] Unregistered flag file")
-			storage_service.storage_schema.storage_tree.register(
-				resource=self.INSTALL_FLAG,
-				parent=storage_service.storage_schema.DATA_ROOT
-			)
-			print(f"[INSTALL-MANAGER] Flag file successfully registered")
-		else:
-			print(f"[INSTALL-MANAGER] Flag file already registered")
+    async def install(self) -> fs.File:
 
-		# Verify the installation flag file
-		if storage_service.storage_schema.file_system.operations.exists(resource=self.INSTALL_FLAG):
-			print("[INSTALL-MANAGER] Install flag currently created")
-			return True
-		else:
-			print("[INSTALL-MANAGER] Install flag unexistent")
-			return False
+        storage_service = self.core.services.get("storage")
+
+        if await self.is_installed():
+            return self.get_program_resource()
+
+        storage_tree = storage_service.storage_schema.storage_tree
+        file_system = storage_service.storage_schema.file_system
+
+        #
+        # Register executable
+        #
+
+        program = self.get_program_resource()
+
+        if not storage_tree.registered(program):
+
+            storage_tree.register(
+                resource=program,
+                parent=storage_service.storage_schema.SOFTWARE_ROOT
+            )
+
+        #
+        # Create executable parent directories
+        #
+
+        file_system.operations.create(
+            resource=program,
+            recursive_parent=True
+        )
+
+        #
+        # Copy executable
+        #
+
+        shutil.copy2(
+            self.get_source_program(),
+            file_system.operations.path(program)
+        )
+
+        print(
+            f"[INSTALL-MANAGER] Program installed: "
+            f"{file_system.operations.path(program)}"
+        )
+
+        #
+        # Register install flag
+        #
+
+        if not storage_tree.registered(self.INSTALL_FLAG):
+
+            storage_tree.register(
+                resource=self.INSTALL_FLAG,
+                parent=storage_service.storage_schema.DATA_ROOT
+            )
+
+        #
+        # Create install flag
+        #
+
+        file_system.operations.create(
+            resource=self.INSTALL_FLAG,
+            recursive_parent=True
+        )
+
+        print("[INSTALL-MANAGER] Installation completed")
+
+        print(
+            file_system.renderers.mermaid(
+                storage_service.storage_schema.UNIT_ROOT
+            )
+        )
+
+        return program
+
+    # =====================================================
+    # UNINSTALL
+    # =====================================================
+
+    async def uninstall(self) -> bool:
+
+        storage_service = self.core.services.get("storage")
+
+        print(
+            "[INSTALL-MANAGER] Deleting: "
+            f"{storage_service.storage_schema.file_system.operations.path(storage_service.storage_schema.AGENT_ROOT)}..."
+        )
+
+        storage_service.storage_schema.file_system.operations.delete(
+            resource=storage_service.storage_schema.AGENT_ROOT,
+            recursive_children=True
+        )
+
+        print("[INSTALL-MANAGER] Directory successfully deleted")
+
+        return True
+
+    # =====================================================
+    # STATUS
+    # =====================================================
+
+    async def is_installed(self) -> bool:
+
+        storage_service = self.core.services.get("storage")
+
+        storage_tree = storage_service.storage_schema.storage_tree
+        file_system = storage_service.storage_schema.file_system
+
+        #
+        # Register resources (if necessary)
+        #
+
+        program = self.get_program_resource()
+
+        if not storage_tree.registered(program):
+
+            storage_tree.register(
+                resource=program,
+                parent=storage_service.storage_schema.SOFTWARE_ROOT
+            )
+
+        if not storage_tree.registered(self.INSTALL_FLAG):
+
+            storage_tree.register(
+                resource=self.INSTALL_FLAG,
+                parent=storage_service.storage_schema.DATA_ROOT
+            )
+
+        #
+        # Verify installation flag
+        #
+
+        installed = file_system.operations.exists(
+            resource=self.INSTALL_FLAG
+        )
+
+        if installed:
+
+            print("[INSTALL-MANAGER] Installation detected")
+
+        else:
+
+            print("[INSTALL-MANAGER] Installation not detected")
+
+        return installed
