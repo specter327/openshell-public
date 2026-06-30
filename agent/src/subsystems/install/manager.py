@@ -18,23 +18,6 @@ class InstallationManager(Subsystem):
     # =====================================================
     # PROGRAM
     # =====================================================
-
-    def get_source_program(self) -> Path:
-        """
-        Returns the executable currently running.
-
-        Interpreted:
-            python agent.py
-
-        PyInstaller:
-            ./agent
-        """
-
-        if getattr(sys, "frozen", False):
-            return Path(sys.executable)
-
-        return Path(sys.argv[0]).resolve()
-
     def get_program_resource(self) -> fs.File:
 
         return fs.File(
@@ -82,7 +65,7 @@ class InstallationManager(Subsystem):
         #
 
         shutil.copy2(
-            self.get_source_program(),
+            self.environment.executable,
             file_system.operations.path(program)
         )
 
@@ -136,7 +119,8 @@ class InstallationManager(Subsystem):
 
         storage_service.storage_schema.file_system.operations.delete(
             resource=storage_service.storage_schema.AGENT_ROOT,
-            recursive_children=True
+            recursive_children=True,
+            purge=True
         )
 
         print("[INSTALL-MANAGER] Directory successfully deleted")

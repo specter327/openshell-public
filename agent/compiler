@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+
+"""
+OpenShell Agent Builder
+
+Compila el agente utilizando PyInstaller e incluye el
+paquete bootstrap dentro del ejecutable.
+"""
+
+from pathlib import Path
+import os
+import shutil
+import subprocess
+import sys
+
+
+# =========================================================
+# CONSTANTS
+# =========================================================
+
+PROJECT_ROOT = Path(__file__).parent.resolve()
+
+ENTRYPOINT = PROJECT_ROOT / "agent"
+
+BOOTSTRAP = PROJECT_ROOT / "bootstrap"
+
+DIST = PROJECT_ROOT / "dist"
+
+BUILD = PROJECT_ROOT / "build"
+
+SPEC = PROJECT_ROOT / "__pycache__"
+
+PROGRAM_NAME = "agent"
+
+
+# =========================================================
+# HELPERS
+# =========================================================
+
+def separator() -> str:
+    """
+    PyInstaller utiliza:
+
+    Linux/macOS:
+        source:destination
+
+    Windows:
+        source;destination
+    """
+
+    return ";" if os.name == "nt" else ":"
+
+
+def clean() -> None:
+
+    print("[BUILD] Cleaning previous build...")
+
+    shutil.rmtree(BUILD, ignore_errors=True)
+    shutil.rmtree(DIST, ignore_errors=True)
+
+    spec = PROJECT_ROOT / f"{PROGRAM_NAME}.spec"
+
+    if spec.exists():
+        spec.unlink()
+
+
+# =========================================================
+# VALIDATION
+# =========================================================
+
+def validate() -> None:
+
+    if not ENTRYPOINT.exists():
+        raise FileNotFoundError(
+            f"Entrypoint not found: {ENTRYPOINT}"
+        )
+
+    if not BOOTSTRAP.exists():
+        raise FileNotFoundError(
+            f"Bootstrap directory not found: {BOOTSTRAP}"
+        )
+
+    print("[BUILD] Validation successful")
+
+
+# =========================================================
+# BUILD
+# =========================================================
+
+def compile() -> None:
+
+    add_data = (
+        f"{BOOTSTRAP}"
+        f"{separator()}"
+        "bootstrap"
+    )
+
+    command = [
+
+        sys.executable,
+
+        "-m",
+
+        "PyInstaller",
+
+        "--clean",
+
+        "--noconfirm",
+
+        "--onefile",
+
+        "--name",
+        PROGRAM_NAME,
+
+        "--distpath",
+        str(DIST),
+
+        "--workpath",
+        str(BUILD),
+
+        "--add-data",
+        add_data,
+
+        str(ENTRYPOINT),
+
+        "--hidden-import",
+        "platformdirs",
+
+        "--hidden-import",
+        "fsresource_tree"
+    ]
+
+    print("[BUILD] Executing:")
+
+    print(" ".join(command))
+
+    subprocess.run(
+        command,
+        check=True
+    )
+
+
+# =========================================================
+# MAIN
+# =========================================================
+
+def main():
+
+    print("----------------------------------------")
+    print("OpenShell Agent Builder")
+    print("----------------------------------------")
+
+    validate()
+
+    clean()
+
+    compile()
+
+    print()
+
+    print("[BUILD] Build completed successfully.")
+
+    print(
+        f"[BUILD] Executable: "
+        f"{DIST / PROGRAM_NAME}"
+    )
+
+
+if __name__ == "__main__":
+    main()

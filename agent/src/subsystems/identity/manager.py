@@ -14,6 +14,7 @@ from shared.identity.store import (
 )
 
 from ..service import Subsystem
+import fsresource_tree as fs
 
 
 class IdentityManager(
@@ -27,10 +28,6 @@ class IdentityManager(
 
         super().__init__(core)
 
-        self.store = IdentityStore(
-            base_path=Path("storage"),
-            namespace="agent"
-        )
 
     # ======================================================
     # EXISTS
@@ -136,3 +133,16 @@ class IdentityManager(
                 self.store.exists()
             )
         }
+
+    async def start(self) -> bool:
+        self._storage_service = self.services.get("storage")
+
+        self.store = IdentityStore(
+            base_path=fs.operations.path(self._storage_service.storage_schema.DATA_ROOT),
+            namespace="agent"
+        )
+
+        return True
+
+    async def stop(self) -> bool:
+        return True

@@ -18,3 +18,5 @@ class Subsystem:
         self.services = core.services
 
         self.runtime = core.runtime
+
+        self.environment = core.runtime_environment

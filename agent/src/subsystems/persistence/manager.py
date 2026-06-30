@@ -10,7 +10,7 @@ class PersistenceManager(Subsystem):
     @property
     def service_directory(self) -> Path:
         return (
-            Path.home()
+            self.environment.home
             / ".config"
             / "systemd"
             / "user"

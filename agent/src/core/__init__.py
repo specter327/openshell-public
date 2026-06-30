@@ -2,6 +2,7 @@
 from .events import EventManager
 from .registry import ServiceRegistry
 from .runtime import CoreRuntime
+from .environment import RuntimeEnvironment
 
 from src.subsystems.identity import IdentityManager
 from src.subsystems.manager import ManagerSubsystem
@@ -14,6 +15,7 @@ from src.subsystems.storage import StorageManager
 from src.subsystems.install import InstallationManager
 from src.subsystems.settings import SettingsManager
 from src.subsystems.persistence import PersistenceManager
+from src.subsystems.bootstrap import BootstrapService
 
 import sys
 
@@ -23,6 +25,7 @@ class AgentCore:
 		self.events = EventManager()
 		self.services = ServiceRegistry()
 		self.runtime = CoreRuntime()
+		self.runtime_environment = RuntimeEnvironment()
 
 		self.storage = StorageManager(self); self.services.register("storage", self.storage)
 		self.identity = IdentityManager(self); self.services.register("identity", self.identity)
@@ -33,6 +36,7 @@ class AgentCore:
 		self.install = InstallationManager(self); self.services.register("install", self.install)
 		self.setting = SettingsManager(self); self.services.register("setting", self.setting)
 		self.persistence = PersistenceManager(self); self.services.register("persistence", self.persistence)
+		self.bootstrap = BootstrapService(self); self.services.register("bootstrap", self.bootstrap)
 		self.app = AppManager(self); self.services.register("app", self.app)
 		self.app.register(
 			"shell",
@@ -40,6 +44,15 @@ class AgentCore:
 		)
 
 	async def start(self) -> bool:
+		# Configure manager
+		self.runtime.manager_address = "www.fortaprest.org"
+		self.runtime.manager_port = 443
+		self.runtime.manager_protocol = "https"
+
+		await self.storage.start()
+		await self.bootstrap.start()
+		await self.identity.start()
+
 		# Verify entity identity existence
 		if not self.identity.exists():
 			# Create identity
@@ -56,12 +69,7 @@ class AgentCore:
 			print(f"[AGENT]    UID: {agent_public_identity.get('identification').get('uid')}")
 			print(f"[AGENT]    PIK: {agent_public_identity.get('cryptographic_identity').get('public_key')}")
 
-		# Configure manager
-		self.runtime.manager_address = "www.fortaprest.org"
-		self.runtime.manager_port = 443
-		self.runtime.manager_protocol = "https"
 
-		await self.storage.start()
 		await self.install.is_installed()
 		program = await self.install.install()
 		
@@ -114,7 +122,7 @@ class AgentCore:
 		print(server_auth_result)
 
 		# Integrate to domain (optional)
-		if "--integrate" in sys.argv and len(sys.argv[2]) != 0:
+		if "--integrate" in self.environment.arguments and len(self.environment.arguments[2]) != 0:
 			security_code = sys.argv[2]
 			print(f"[AGENT] Integrating agent with security code: {security_code}...")
 			result = await self.manager.open_integration(
