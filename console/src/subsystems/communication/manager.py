@@ -47,6 +47,7 @@ class CommunicationSubsystem(
 
         fs.operations.create(
             resource=self.COMM_DATA_DIR,
+            recursive_parent=True,
             recursive_children=True
         )
 

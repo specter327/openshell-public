@@ -52,3 +52,17 @@ class ConsoleCore:
         self.app = AppManager(self); self.services.register("app", self.app)
         self.app.register("shell", ShellApplication)
         self.communication = CommunicationSubsystem(self); self.services.register("communication", self.communication)
+
+    async def start(self) -> bool:
+        # Start services
+        await self.storage.start()
+        # self.bootstrap.start()
+        await self.identity.start()
+        # self.install.install()
+        await self.communication.start()
+        await self.setting.start()
+
+        return True
+
+    async def stop(self) -> bool:
+        return True

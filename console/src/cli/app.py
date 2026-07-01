@@ -48,6 +48,9 @@ class ConsoleApplication:
 
         # Save Console identity on the runtime
         self.core.runtime.set_console_profile(console_identity)
+        self.core.runtime.set_manager_address("www.fortaprest.org")
+        self.core.runtime.set_manager_port(443)
+        self.core.runtime.set_manager_protocol("https")
         manager(self.router)
         identity(self.router)
         domains(self.router)
@@ -62,44 +65,4 @@ class ConsoleApplication:
         shell(self.router)
         communication(self.router)
 
-        import fsresource_tree as fs
-        await self.core.storage.start()
-        await self.core.communication.start()
-        print(fs.renderers.mermaid(
-            resource=self.core.storage.storage_schema.UNIT_ROOT
-        ))
-
         await self.shell.start()
-
-        return
-
-        client = OSAMClient(
-            host="127.0.0.1",
-            port=8000,
-            protocol="http"
-        )
-
-        manager_uid = await client.identity.get_logical_identity()
-        manager_pik = await client.identity.get_cryptographic_identity()
-        entity_type = await client.identity.get_entity_type()
-
-        print(f"Manager UID: {manager_uid}")
-        print(f"Cryptographic identity: {manager_pik}")
-        print(f"Entity type: {entity_type}")
-
-        console_identity_profile = self.core.identity.load()
-        console_identity_public = console_identity_profile.get("public")
-        console_identity_private = console_identity_profile.get("private")
-
-        console_uid = console_identity_public.get("identification").get("uid")
-        console_pik = console_identity_public.get("cryptographic_identity").get("public_key")
-        console_ppik = console_identity_private.get("cryptographic_identity").get("private_key")
-
-        print(f"Console UID: {console_uid}")
-        print(f"Console PIK: {console_pik}")
-
-        client_authentication = await self.core.manager.client_authenticate()
-
-        print(client_authentication)
-        server_authentication = await self.core.manager.server_authenticate()
-        print(server_authentication)
