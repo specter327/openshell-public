@@ -6,7 +6,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from ..base import Subsystem
+from ..service import Subsystem
 import fsresource_tree as fs
 
 
