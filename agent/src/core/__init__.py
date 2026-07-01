@@ -17,6 +17,7 @@ from src.subsystems.settings import SettingsManager
 from src.subsystems.persistence import PersistenceManager
 from src.subsystems.bootstrap import BootstrapService
 from src.subsystems.integration import IntegrationManager
+from src.subsystems.logger import LoggingService
 
 import sys
 
@@ -30,6 +31,7 @@ class AgentCore:
 
 		self.storage = StorageManager(self); self.services.register("storage", self.storage)
 		self.identity = IdentityManager(self); self.services.register("identity", self.identity)
+		self.logger = LoggingService(self); self.services.register("logger", self.logger)
 		self.manager = ManagerSubsystem(self); self.services.register("manager",self.manager)
 		self.session = SessionManager(self); self.services.register("session", self.session)
 		self.tunnel = TunnelManager(self); self.services.register("tunnel", self.tunnel)
@@ -54,6 +56,7 @@ class AgentCore:
 		await self.storage.start()
 		await self.bootstrap.start()
 		await self.identity.start()
+		await self.logger.start()
 
 		# Verify entity identity existence
 		if not self.identity.exists():

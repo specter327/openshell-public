@@ -1,49 +1,196 @@
+# =========================================================
+# OpenShell Logging Service
+# =========================================================
+
+from pathlib import Path
+
+from loguru import logger
+
 from ..base import Subsystem
-from .models import LogEvent
+import fsresource_tree as fs
 
 
-class LoggingManager(Subsystem):
+class LoggingService(Subsystem):
+    LOG_DIR: fs.File = fs.File(
+        name="logs"
+    )
+
+    """
+    Centralized system logging service.
+
+    Provides a shared interface for all system components
+    to write operational logs.
+
+    Backend:
+        loguru
+    """
 
 
-    def __init__(self, core):
+
+    def __init__(
+        self,
+        core
+    ):
 
         super().__init__(core)
 
-        self.handlers = []
+        self.initialized = False
 
-
-    def register(
-        self,
-        handler
-    ):
-        self.handlers.append(handler)
+        self.log_directory = None
 
 
 
-    def emit(
+    # =====================================================
+    # LIFECYCLE
+    # =====================================================
+
+    async def start(self):
+        self._storage_service = self.services.get("storage")
+
+        self.configure()
+
+        self.initialized = True
+
+
+
+    async def stop(self):
+
+        self.initialized = False
+
+
+
+    # =====================================================
+    # CONFIGURATION
+    # =====================================================
+
+    async def configure(self):
+        self._storage_service.storage_schema.storage_tree.register(
+            resource=self.LOG_DIR,
+            parent=self._storage_service.storage_schema.DATA_ROOT
+        )
+
+        self._storage_service.storage_schema.file_system.operations.create(
+            self.LOG_DIR
+        )
+
+        logger.remove()
+        logger.add(
+            str(
+                fs.operations.path(self.LOG_DIR) /
+                "{time:DD-MM-YY-HH-mm-ss}.log"
+            ),
+            rotation="10 MB",
+            retention=None,
+            compression=None,
+            enqueue=True,
+            encoding="utf-8",
+            backtrace=True,
+            diagnose=False,
+            format=(
+                "{time:YYYY-MM-DD HH:mm:ss} | "
+                "{level} | "
+                "{extra[source]} | "
+                "{message}"
+            )
+        )
+
+
+    # =====================================================
+    # LOGGING
+    # =====================================================
+
+    async def log(
         self,
         source,
-        event,
-        payload=None,
-        level="INFO"
+        message,
+        level="INFO",
+        **context
     ):
 
-        log = LogEvent.create(
+        logger.bind(
+            source=source,
+            **context
+        ).log(
+            level,
+            message
+        )
+
+
+
+    async def debug(
+        self,
+        source,
+        message,
+        **context
+    ):
+
+        self.log(
             source,
-            event,
-            payload,
-            level
+            message,
+            "DEBUG",
+            **context
         )
 
 
-        for handler in self.handlers:
-            handler.write(log)
 
+    async def info(
+        self,
+        source,
+        message,
+        **context
+    ):
 
-        self.events.publish(
-            "LOG_EVENT",
-            log
+        self.log(
+            source,
+            message,
+            "INFO",
+            **context
         )
 
 
-        return log
+
+    async def warning(
+        self,
+        source,
+        message,
+        **context
+    ):
+
+        self.log(
+            source,
+            message,
+            "WARNING",
+            **context
+        )
+
+
+
+    async def error(
+        self,
+        source,
+        message,
+        **context
+    ):
+
+        self.log(
+            source,
+            message,
+            "ERROR",
+            **context
+        )
+
+
+
+    async def critical(
+        self,
+        source,
+        message,
+        **context
+    ):
+
+        self.log(
+            source,
+            message,
+            "CRITICAL",
+            **context
+        )
