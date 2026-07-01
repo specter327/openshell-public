@@ -6,6 +6,7 @@ from ..service import Subsystem
 class PersistenceManager(Subsystem):
 
     SERVICE_NAME = "openshell-agent"
+    ELEMENT_NAME: str = "PERSISTENCE-MANAGER"
 
     @property
     def service_directory(self) -> Path:
@@ -32,6 +33,9 @@ class PersistenceManager(Subsystem):
     ) -> bool:
 
         storage_service = self.services.get("storage")
+        logger_service = self.services.get("logger")
+
+        logger_service.info(source=self.ELEMENT_NAME, message="Initializing persistence installation")
         program_path = storage_service.storage_schema.file_system.operations.path(executable)
 
         self.service_directory.mkdir(
@@ -67,6 +71,8 @@ WantedBy=default.target
             check=True
         )
 
+        logger_service.info(source=self.ELEMENT_NAME, message="Finishing persistence installation")
+
         return True
 
     # =====================================================
@@ -74,6 +80,8 @@ WantedBy=default.target
     # =====================================================
 
     async def uninstall(self) -> bool:
+        logger_service = self.services.get("logger")
+        logger_service.info(source=self.ELEMENT_NAME, message="Initiating persistence uninstallation")
 
         await self.disable()
 
@@ -89,6 +97,7 @@ WantedBy=default.target
             check=True
         )
 
+        logger_service.info(source=self.ELEMENT_NAME, message="Finishing persistence uninstallation")
         return True
 
     # =====================================================

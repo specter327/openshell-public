@@ -11,30 +11,22 @@ import os
 
 class RuntimeEnvironment:
     """
-    Execution environment information.
+    Runtime execution environment.
 
     This object centralizes every property related to the
     current execution context.
 
-    Responsibilities:
+    Responsibilities
 
-        - Detect development / frozen execution
+        - Detect development / packaged execution
         - Detect PyInstaller environment
-        - Resolve executable paths
+        - Resolve execution command
+        - Resolve entrypoint
+        - Resolve interpreter
         - Resolve bundle paths
         - Resolve working directory
         - Provide platform information
-
-    It does NOT contain:
-
-        - Business logic
-        - Storage logic
-        - Installation logic
-        - Persistence logic
     """
-
-    def __init__(self):
-        pass
 
     # ======================================================
     # EXECUTION MODE
@@ -47,10 +39,6 @@ class RuntimeEnvironment:
         """
         return getattr(sys, "frozen", False)
 
-    @property
-    def arguments(self) -> list:
-        return sys.argv
-    
     @property
     def development(self) -> bool:
         """
@@ -65,6 +53,80 @@ class RuntimeEnvironment:
         """
         return hasattr(sys, "_MEIPASS")
 
+    @property
+    def arguments(self) -> list[str]:
+        """
+        Original process arguments.
+        """
+        return list(sys.argv)
+
+    # ======================================================
+    # EXECUTION
+    # ======================================================
+
+    @property
+    def interpreter(self) -> Path | None:
+        """
+        Python interpreter.
+
+        Development:
+            /usr/bin/python3
+            venv/bin/python
+
+        Frozen:
+            None
+        """
+
+        if self.frozen:
+            return None
+
+        return Path(sys.executable).resolve()
+
+    @property
+    def entrypoint(self) -> Path:
+        """
+        OpenShell entrypoint.
+
+        Development:
+            Entry script.
+
+        Frozen:
+            Executable itself.
+        """
+
+        if self.frozen:
+            return Path(sys.executable).resolve()
+
+        return Path(sys.argv[0]).resolve()
+
+    @property
+    def command(self) -> list[str]:
+        """
+        Command required to execute OpenShell.
+
+        Development:
+            [
+                python,
+                main.py
+            ]
+
+        Frozen:
+            [
+                agent
+            ]
+        """
+
+        if self.frozen:
+
+            return [
+                str(self.entrypoint)
+            ]
+
+        return [
+            str(self.interpreter),
+            str(self.entrypoint)
+        ]
+
     # ======================================================
     # PATHS
     # ======================================================
@@ -77,37 +139,18 @@ class RuntimeEnvironment:
         return Path.cwd().resolve()
 
     @property
-    def executable(self) -> Path:
-        """
-        Executable currently running.
-
-        Development:
-            python executable
-
-        Frozen:
-            packaged executable
-        """
-        return Path(sys.executable).resolve()
-
-    @property
     def executable_directory(self) -> Path:
         """
-        Directory containing the executable.
+        Directory containing the OpenShell entrypoint.
         """
-        return self.executable.parent
+        return self.entrypoint.parent
 
     @property
     def script(self) -> Path:
         """
-        Current entry script.
-
-        Development:
-            agent
-
-        Frozen:
-            executable itself
+        Alias of entrypoint.
         """
-        return Path(sys.argv[0]).resolve()
+        return self.entrypoint
 
     @property
     def script_directory(self) -> Path:
@@ -125,7 +168,7 @@ class RuntimeEnvironment:
             sys._MEIPASS
 
         Frozen (--onedir):
-            executable directory
+            executable directory.
         """
 
         if self.pyinstaller:
@@ -146,7 +189,12 @@ class RuntimeEnvironment:
 
     @property
     def temp(self) -> Path:
-        return Path(os.getenv("TMPDIR", "/tmp")).resolve()
+        return Path(
+            os.getenv(
+                "TMPDIR",
+                "/tmp"
+            )
+        ).resolve()
 
     # ======================================================
     # PLATFORM
@@ -190,39 +238,53 @@ class RuntimeEnvironment:
 
             "pyinstaller": self.pyinstaller,
 
+            "arguments": self.arguments,
+
             "cwd": str(self.cwd),
 
-            "script": str(self.script),
+            "interpreter":
+                None if self.interpreter is None
+                else str(self.interpreter),
 
-            "script_directory": str(
-                self.script_directory
-            ),
+            "entrypoint":
+                str(self.entrypoint),
 
-            "bundle_root": str(
-                self.bundle_root
-            ),
+            "command":
+                self.command,
 
-            "executable": str(
-                self.executable
-            ),
+            "script":
+                str(self.script),
 
-            "executable_directory": str(
-                self.executable_directory
-            ),
+            "script_directory":
+                str(self.script_directory),
 
-            "home": str(self.home),
+            "bundle_root":
+                str(self.bundle_root),
 
-            "temp": str(self.temp),
+            "executable_directory":
+                str(self.executable_directory),
 
-            "system": self.system,
+            "home":
+                str(self.home),
 
-            "release": self.release,
+            "temp":
+                str(self.temp),
 
-            "machine": self.machine,
+            "system":
+                self.system,
 
-            "architecture": self.architecture,
+            "release":
+                self.release,
 
-            "python_version": self.python_version,
+            "machine":
+                self.machine,
 
-            "hostname": self.hostname
+            "architecture":
+                self.architecture,
+
+            "python_version":
+                self.python_version,
+
+            "hostname":
+                self.hostname
         }

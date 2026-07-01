@@ -47,7 +47,7 @@ class LoggingService(Subsystem):
     async def start(self):
         self._storage_service = self.services.get("storage")
 
-        self.configure()
+        await self.configure()
 
         self.initialized = True
 
@@ -69,16 +69,15 @@ class LoggingService(Subsystem):
             parent=self._storage_service.storage_schema.DATA_ROOT
         )
 
-        self._storage_service.storage_schema.file_system.operations.create(
-            self.LOG_DIR
-        )
+        #self._storage_service.storage_schema.file_system.operations.create(
+        #    self.LOG_DIR,
+        #    recursive_parent=True,
+        #    recursive_children=True
+        #)
 
         logger.remove()
         logger.add(
-            str(
-                fs.operations.path(self.LOG_DIR) /
-                "{time:DD-MM-YY-HH-mm-ss}.log"
-            ),
+            fs.operations.path(self.LOG_DIR) + "/{time:DD-MM-YY-HH-mm-ss}.log",
             rotation="10 MB",
             retention=None,
             compression=None,
@@ -99,7 +98,7 @@ class LoggingService(Subsystem):
     # LOGGING
     # =====================================================
 
-    async def log(
+    def log(
         self,
         source,
         message,
@@ -117,7 +116,7 @@ class LoggingService(Subsystem):
 
 
 
-    async def debug(
+    def debug(
         self,
         source,
         message,
@@ -133,7 +132,7 @@ class LoggingService(Subsystem):
 
 
 
-    async def info(
+    def info(
         self,
         source,
         message,
@@ -149,7 +148,7 @@ class LoggingService(Subsystem):
 
 
 
-    async def warning(
+    def warning(
         self,
         source,
         message,
@@ -165,7 +164,7 @@ class LoggingService(Subsystem):
 
 
 
-    async def error(
+    def error(
         self,
         source,
         message,
@@ -181,7 +180,7 @@ class LoggingService(Subsystem):
 
 
 
-    async def critical(
+    def critical(
         self,
         source,
         message,

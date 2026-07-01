@@ -23,6 +23,8 @@ class CommunicationSubsystem(
         extension="json"
     )
 
+    ELEMENT_NAME: str = "COMMUNICATION-MANAGER"
+
     def __init__(
         self,
         core
@@ -35,6 +37,7 @@ class CommunicationSubsystem(
         self.connected = False
 
         self.storage = self.services.get("storage")
+        self.logger = self.services.get("logger")
 
     async def _initialize(self) -> bool:
         self.storage.storage_schema.storage_tree.register(
@@ -93,7 +96,10 @@ class CommunicationSubsystem(
         return await self._update_peers_file(peers)
 
     async def start(self) -> bool:
+        self.logger.info(source=self.ELEMENT_NAME, message="Initializing communication manager")
         await self._initialize()
+        self.logger.info(source=self.ELEMENT_NAME, message="Communication manager initialized")
+
         return True
 
     async def connect(

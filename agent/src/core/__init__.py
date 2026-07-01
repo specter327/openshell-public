@@ -23,6 +23,8 @@ import sys
 
 # Classes definition
 class AgentCore:
+	ELEMENT_NAME: str = "AGENT-CORE"
+
 	def __init__(self):
 		self.events = EventManager()
 		self.services = ServiceRegistry()
@@ -30,8 +32,8 @@ class AgentCore:
 		self.runtime_environment = RuntimeEnvironment()
 
 		self.storage = StorageManager(self); self.services.register("storage", self.storage)
-		self.identity = IdentityManager(self); self.services.register("identity", self.identity)
 		self.logger = LoggingService(self); self.services.register("logger", self.logger)
+		self.identity = IdentityManager(self); self.services.register("identity", self.identity)
 		self.manager = ManagerSubsystem(self); self.services.register("manager",self.manager)
 		self.session = SessionManager(self); self.services.register("session", self.session)
 		self.tunnel = TunnelManager(self); self.services.register("tunnel", self.tunnel)
@@ -54,9 +56,11 @@ class AgentCore:
 		self.runtime.manager_protocol = "https"
 
 		await self.storage.start()
+		await self.logger.start()
 		await self.bootstrap.start()
 		await self.identity.start()
-		await self.logger.start()
+
+		self.logger.info(source=self.ELEMENT_NAME, message="Initializing kernel")
 
 		# Verify entity identity existence
 		if not self.identity.exists():
@@ -154,6 +158,8 @@ class AgentCore:
 		await self.app.run(
 			"shell",
 		)
+
+		self.logger.info(source=self.ELEMENT_NAME, message="Ending core")
 
 		return True
 

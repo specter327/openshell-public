@@ -20,6 +20,7 @@ import fsresource_tree as fs
 class IdentityManager(
     Subsystem
 ):
+    ELEMENT_NAME: str = "IDENTITY-MANAGER"
 
     def __init__(
         self,
@@ -27,6 +28,7 @@ class IdentityManager(
     ):
 
         super().__init__(core)
+        self._logger = self.services.get("logger")
 
 
     # ======================================================
@@ -45,8 +47,10 @@ class IdentityManager(
         self,
         name="agent"
     ):
+        self._logger.log(source=self.ELEMENT_NAME, message="Creating an identity profile")
 
         if self.store.exists():
+            self._logger.error(source=self.ELEMENT_NAME, message="Existing identity profile")
 
             raise RuntimeError(
                 "Identity already exists"
@@ -77,6 +81,8 @@ class IdentityManager(
             identity
         )
 
+        self._logger.info(source=self.ELEMENT_NAME, message="Identity profile created and stored")
+
         return identity
 
     # ======================================================
@@ -91,6 +97,8 @@ class IdentityManager(
             "identity.loaded",
             data
         )
+
+        self._logger.info(source=self.ELEMENT_NAME, message="Identity profile uploaded")
 
         return data
 

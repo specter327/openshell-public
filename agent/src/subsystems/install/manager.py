@@ -1,7 +1,7 @@
 # Library import
 from pathlib import Path
 import shutil
-import sys
+import shlex
 
 import fsresource_tree as fs
 
@@ -15,14 +15,71 @@ class InstallationManager(Subsystem):
         extension="flag"
     )
 
+    ELEMENT_NAME: str = "INSTALLATION-MANAGER"
+
     # =====================================================
     # PROGRAM
     # =====================================================
+
     def get_program_resource(self) -> fs.File:
 
         return fs.File(
             name="agent"
         )
+
+    # =====================================================
+    # PRIVATE
+    # =====================================================
+
+    def _install_program(
+        self,
+        destination: Path
+    ) -> None:
+        """
+        Install the executable program.
+
+        Development:
+            Create launcher script.
+
+        Frozen:
+            Copy packaged executable.
+        """
+
+        #
+        # Frozen executable
+        #
+
+        if self.environment.frozen:
+
+            shutil.copy2(
+                self.environment.entrypoint,
+                destination
+            )
+
+            destination.chmod(0o755)
+
+            return
+
+        #
+        # Development launcher
+        #
+
+        command = " ".join(
+            shlex.quote(argument)
+            for argument in self.environment.command
+        )
+
+        launcher = (
+            "#!/usr/bin/env bash\n\n"
+            f'exec {command} "$@"\n'
+        )
+
+        destination.write_text(
+            launcher,
+            encoding="utf-8"
+        )
+
+        destination.chmod(0o755)
 
     # =====================================================
     # INSTALL
@@ -31,8 +88,20 @@ class InstallationManager(Subsystem):
     async def install(self) -> fs.File:
 
         storage_service = self.core.services.get("storage")
+        logger_service = self.services.get("logger")
+
+        logger_service.info(
+            source=self.ELEMENT_NAME,
+            message="Starting installation"
+        )
 
         if await self.is_installed():
+
+            logger_service.warning(
+                source=self.ELEMENT_NAME,
+                message="Installation currently detected"
+            )
+
             return self.get_program_resource()
 
         storage_tree = storage_service.storage_schema.storage_tree
@@ -52,7 +121,7 @@ class InstallationManager(Subsystem):
             )
 
         #
-        # Create executable parent directories
+        # Create executable
         #
 
         file_system.operations.create(
@@ -61,17 +130,20 @@ class InstallationManager(Subsystem):
         )
 
         #
-        # Copy executable
+        # Install executable / launcher
         #
 
-        shutil.copy2(
-            self.environment.executable,
+        destination = Path(
             file_system.operations.path(program)
         )
 
+        self._install_program(
+            destination
+        )
+
         print(
-            f"[INSTALL-MANAGER] Program installed: "
-            f"{file_system.operations.path(program)}"
+            "[INSTALL-MANAGER] Program installed: "
+            f"{destination}"
         )
 
         #
@@ -102,6 +174,11 @@ class InstallationManager(Subsystem):
             )
         )
 
+        logger_service.info(
+            source=self.ELEMENT_NAME,
+            message="Installation complete"
+        )
+
         return program
 
     # =====================================================
@@ -111,6 +188,12 @@ class InstallationManager(Subsystem):
     async def uninstall(self) -> bool:
 
         storage_service = self.core.services.get("storage")
+        logger_service = self.services.get("logger")
+
+        logger_service.info(
+            source=self.ELEMENT_NAME,
+            message="Starting uninstallation"
+        )
 
         print(
             "[INSTALL-MANAGER] Deleting: "
@@ -123,7 +206,14 @@ class InstallationManager(Subsystem):
             purge=True
         )
 
-        print("[INSTALL-MANAGER] Directory successfully deleted")
+        print(
+            "[INSTALL-MANAGER] Directory successfully deleted"
+        )
+
+        logger_service.info(
+            source=self.ELEMENT_NAME,
+            message="Finishing uninstallation"
+        )
 
         return True
 
@@ -168,10 +258,14 @@ class InstallationManager(Subsystem):
 
         if installed:
 
-            print("[INSTALL-MANAGER] Installation detected")
+            print(
+                "[INSTALL-MANAGER] Installation detected"
+            )
 
         else:
 
-            print("[INSTALL-MANAGER] Installation not detected")
+            print(
+                "[INSTALL-MANAGER] Installation not detected"
+            )
 
         return installed
