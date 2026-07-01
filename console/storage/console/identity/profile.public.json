@@ -1,0 +1,11 @@
+{
+    "identification": {
+        "uid": "019f1b95-b7b3-7b81-a5a9-4c3da98085ed"
+    },
+    "cryptographic_identity": {
+        "algorithm": "ed25519",
+        "public_key": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA3n1ggVK0cdRNFGtBDrWEkMUnMzcYHgdlY+0zvzSDNl0=\n-----END PUBLIC KEY-----\n",
+        "fingerprint": "4c19a845e35b3d64e201e84085d9b6c65a3176932b0a9f3a63fa397ee67672b1"
+    },
+    "name": "voron-propietary"
+}
