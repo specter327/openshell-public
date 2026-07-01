@@ -1,7 +1,7 @@
 # Library import
 from pathlib import Path
 from typing import Optional
-import sys
+import shutil
 
 import fsresource_tree as fs
 
@@ -22,19 +22,34 @@ class BootstrapService(Subsystem):
         super().__init__(core)
 
     # =====================================================
-    # LOCATION
-    # =====================================================
-
-
-    # =====================================================
-    # PATH
+    # SOURCE
     # =====================================================
 
     def bootstrap_path(self) -> Path:
+        """
+        Bootstrap package bundled with the executable.
+        """
 
         return (
             self.environment.bundle_root
             / self.BOOTSTRAP_ROOT.name
+        )
+
+    # =====================================================
+    # DESTINATION
+    # =====================================================
+
+    def destination_path(self) -> Path:
+        """
+        Persistent bootstrap location.
+        """
+
+        return Path(
+            self._storage_service
+            .storage_schema
+            .file_system
+            .operations
+            .path(self.BOOTSTRAP_ROOT)
         )
 
     # =====================================================
@@ -46,30 +61,73 @@ class BootstrapService(Subsystem):
         return self.bootstrap_path().exists()
 
     # =====================================================
+    # INSTALL
+    # =====================================================
+
+    async def install(self) -> Path:
+        """
+        Copy bundled bootstrap resources into the
+        persistent storage location.
+        """
+
+        source = self.bootstrap_path()
+        destination = self.destination_path()
+
+        if destination.exists():
+
+            print(
+                "[BOOTSTRAP] Bootstrap already installed."
+            )
+
+            return destination
+
+        print(
+            f"[BOOTSTRAP] Installing bootstrap package..."
+        )
+
+        destination.parent.mkdir(
+            parents=True,
+            exist_ok=True
+        )
+
+        shutil.copytree(
+            src=source,
+            dst=destination,
+            dirs_exist_ok=True
+        )
+
+        print(
+            f"[BOOTSTRAP] Bootstrap installed: {destination}"
+        )
+
+        return destination
+
+    # =====================================================
     # LOAD
     # =====================================================
 
     async def load(self) -> fs.Directory:
 
         #
-        # Already loaded
+        # Register root
         #
 
         if not self.resource_tree.registered(
             self.BOOTSTRAP_ROOT
         ):
+
             self.resource_tree.register(
                 resource=self.BOOTSTRAP_ROOT
             )
 
         #
-        # Register root
+        # Ensure bootstrap is installed
         #
 
-
-        root_path = self.bootstrap_path()
+        root_path = await self.install()
 
         if not root_path.exists():
+
             return self.BOOTSTRAP_ROOT
 
         #
@@ -121,11 +179,9 @@ class BootstrapService(Subsystem):
             # File
             #
 
-            suffix = child.suffix.lstrip(".")
-
             resource = fs.File(
                 name=child.stem,
-                extension=suffix
+                extension=child.suffix.lstrip(".")
             )
 
             self.resource_tree.register(
@@ -144,9 +200,10 @@ class BootstrapService(Subsystem):
 
         await self.load()
 
-        for resource in self.resource_tree.resources():
+        for resource in self.resource_tree.resources.values():
 
             if resource.name == name:
+
                 return resource
 
         return None
@@ -157,20 +214,44 @@ class BootstrapService(Subsystem):
 
     async def start(self) -> bool:
 
-        self._storage_service = self.services.get("storage")
-        self.resource_tree = self._storage_service.storage_schema.storage_tree
-        self.resource_tree.register(
-            self.BOOTSTRAP_ROOT, 
-            parent=self._storage_service.storage_schema.AGENT_ROOT
+        self._storage_service = self.services.get(
+            "storage"
         )
 
+        self.resource_tree = (
+            self._storage_service
+            .storage_schema
+            .storage_tree
+        )
+
+        #
+        # Register bootstrap root
+        #
+
+        if not self.resource_tree.registered(
+            self.BOOTSTRAP_ROOT
+        ):
+
+            self.resource_tree.register(
+                resource=self.BOOTSTRAP_ROOT,
+                parent=self._storage_service
+                .storage_schema
+                .AGENT_ROOT
+            )
 
         print(
-            f"[BOOTSTRAP] Bundle root: {self.environment.bundle_root}"
+            f"[BOOTSTRAP] Bundle root: "
+            f"{self.environment.bundle_root}"
         )
 
         print(
-            f"[BOOTSTRAP] Bootstrap path: {self.bootstrap_path()}"
+            f"[BOOTSTRAP] Bundle bootstrap: "
+            f"{self.bootstrap_path()}"
+        )
+
+        print(
+            f"[BOOTSTRAP] Storage bootstrap: "
+            f"{self.destination_path()}"
         )
 
         if not await self.exists():
@@ -189,7 +270,9 @@ class BootstrapService(Subsystem):
 
         print(
             fs.renderers.mermaid(
-                self._storage_service.storage_schema.AGENT_ROOT
+                self._storage_service
+                .storage_schema
+                .AGENT_ROOT
             )
         )
 

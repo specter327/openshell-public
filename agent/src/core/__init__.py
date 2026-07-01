@@ -16,6 +16,7 @@ from src.subsystems.install import InstallationManager
 from src.subsystems.settings import SettingsManager
 from src.subsystems.persistence import PersistenceManager
 from src.subsystems.bootstrap import BootstrapService
+from src.subsystems.integration import IntegrationManager
 
 import sys
 
@@ -37,6 +38,7 @@ class AgentCore:
 		self.setting = SettingsManager(self); self.services.register("setting", self.setting)
 		self.persistence = PersistenceManager(self); self.services.register("persistence", self.persistence)
 		self.bootstrap = BootstrapService(self); self.services.register("bootstrap", self.bootstrap)
+		self.integration = IntegrationManager(self); self.services.register("integration", self.integration)
 		self.app = AppManager(self); self.services.register("app", self.app)
 		self.app.register(
 			"shell",
@@ -104,12 +106,13 @@ class AgentCore:
 			}
 		)
 
-		import time
-		print(f"[AGENT] Waiting until uninstall...")
-		time.sleep(30)
-		await self.persistence.disable()
-		await self.persistence.uninstall()
-		await self.install.uninstall()
+
+		#import time
+		#print(f"[AGENT] Waiting until uninstall...")
+		#time.sleep(30)
+		#await self.persistence.disable()
+		#await self.persistence.uninstall()
+		#await self.install.uninstall()
 		
 		# Authenticate
 		client_auth_result = await self.manager.client_authenticate()
@@ -121,8 +124,10 @@ class AgentCore:
 		print(client_auth_result)
 		print(server_auth_result)
 
+		await self.integration.start()
+
 		# Integrate to domain (optional)
-		if "--integrate" in self.environment.arguments and len(self.environment.arguments[2]) != 0:
+		if "--integrate" in self.runtime_environment.arguments and len(self.runtime_environment.arguments[2]) != 0:
 			security_code = sys.argv[2]
 			print(f"[AGENT] Integrating agent with security code: {security_code}...")
 			result = await self.manager.open_integration(

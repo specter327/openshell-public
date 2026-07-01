@@ -48,6 +48,10 @@ class RuntimeEnvironment:
         return getattr(sys, "frozen", False)
 
     @property
+    def arguments(self) -> list:
+        return sys.argv
+    
+    @property
     def development(self) -> bool:
         """
         Running directly from source code.

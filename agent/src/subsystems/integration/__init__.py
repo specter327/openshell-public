@@ -1,1 +1,1 @@
-from .manager import IntegrationService
+from .manager import IntegrationManager
