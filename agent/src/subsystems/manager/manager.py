@@ -5,7 +5,7 @@
 
 
 from ..service import Subsystem
-from ...shared.api.manager.v1 import OSAMClient
+from shared.api.manager.v1 import OSAMClient
 
 
 class ManagerSubsystem(Subsystem):

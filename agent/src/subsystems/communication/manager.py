@@ -5,7 +5,7 @@
 
 from ..service import Subsystem
 
-from ...shared.modules.utils import (
+from shared.modules.utils import (
     CommunicationHandler
 )
 

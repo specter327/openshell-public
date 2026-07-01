@@ -1,6 +1,6 @@
 # applications/shell.py
 
-from ...shared.modules.shell.server import (
+from shared.modules.shell.server import (
     ShellServer
 )
 
