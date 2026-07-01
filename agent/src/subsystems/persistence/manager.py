@@ -49,6 +49,8 @@ Type=simple
 ExecStart={program_path}
 Restart=always
 RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=5
 
 [Install]
 WantedBy=default.target
